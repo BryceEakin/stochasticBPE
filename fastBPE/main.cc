@@ -1,4 +1,6 @@
 #include "fastBPE.hpp"
+#include <stdlib.h>
+#include <time.h>
 
 using namespace std;
 using namespace fastBPE;
@@ -22,6 +24,10 @@ int main(int argc, char **argv) {
     printUsage();
     exit(EXIT_FAILURE);
   }
+
+  /* initialize random seed: */
+  srand(time(NULL));
+
   string command = argv[1];
   if (command == "getvocab") {
     assert(argc == 3 || argc == 4);
@@ -34,7 +40,7 @@ int main(int argc, char **argv) {
     applybpe(argv[2], argv[3], argv[4], argc == 7 ? argv[6] : "", argv[5]);
   } else if (command == "applybpe_stream") {
     assert(argc == 4 || argc == 5);
-    applybpe_stream(argv[2], argc == 4 ? argv[4] : "", argv[3]);
+    applybpe_stream(argv[2], argc == 5 ? argv[4] : "", argv[3]);
   } else {
     printUsage();
     exit(EXIT_FAILURE);

@@ -11,7 +11,6 @@
 #include <set>
 #include <stdio.h>
 #include <stdlib.h>
-#include <time.h>
 #include <string>
 #include <cstring>
 #include <sys/mman.h>
@@ -21,9 +20,6 @@
 #include <unordered_map>
 #include <unordered_set>
 #include <vector>
-
-/* initialize random seed: */
-srand (time(NULL));
 
 namespace fastBPE {
 
