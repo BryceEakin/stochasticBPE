@@ -10,6 +10,8 @@
 #include <list>
 #include <set>
 #include <stdio.h>
+#include <stdlib.h>
+#include <time.h>
 #include <string>
 #include <cstring>
 #include <sys/mman.h>
@@ -20,6 +22,8 @@
 #include <unordered_set>
 #include <vector>
 
+/* initialize random seed: */
+srand (time(NULL));
 
 namespace fastBPE {
 
@@ -523,7 +527,8 @@ void limitVocab(const vector<string> &subwords, vector<string> &newSubwords,
 string process_bpe(vector<string> &subwords,
                    unordered_map<tps, uint32_t, pair_hash> &codes,
                    unordered_map<string, tps> &reversed_codes,
-                   unordered_map<string, uint32_t> &vocab) {
+                   unordered_map<string, uint32_t> &vocab,
+                   const float matchAcceptRate) {
   // merge subWords as much as possible
   vector<string> newSubwords;
   while (subwords.size() > 1) {
@@ -549,7 +554,8 @@ string process_bpe(vector<string> &subwords,
     for (size_t i = 0; i < subwords.size(); i++) {
       if ((i + 1 < subwords.size()) && (not justMerged) &&
           subwords[i] == bestPair->first.first &&
-          subwords[i + 1] == bestPair->first.second) {
+          subwords[i + 1] == bestPair->first.second &&
+          (static_cast <float> (rand()) / static_cast <float> (RAND_MAX) <= matchAcceptRate){
         newSubwords.push_back(subwords[i] + subwords[i + 1]);
         justMerged = true;
       } else {
@@ -578,8 +584,11 @@ string process_bpe(vector<string> &subwords,
   );
 }
 
-void applybpe(const char *outputFile, const char *inputFile,
-              const char *codesPath, const char *vocabPath) {
+void applybpe(const char *outputFile, 
+              const char *inputFile,
+              const char *codesPath, 
+              const char *vocabPath,
+              const char *chrMatchAcceptRate) {
   // read vocabulary (to which we want to limit the output file)
   unordered_map<string, uint32_t> vocab;
   if (strcmp(vocabPath, "") != 0) {
@@ -604,6 +613,8 @@ void applybpe(const char *outputFile, const char *inputFile,
     bpeTokVec.push_back(x);
   }
 
+  float matchAcceptRate = stof(string(chrMatchAcceptRate));
+
   // apply BPE codes to each word
   unordered_map<string, string> bpe[kThreads];
   vector<thread> threads;
@@ -612,7 +623,7 @@ void applybpe(const char *outputFile, const char *inputFile,
       [&](size_t this_thread) {
         for (size_t w = this_thread; w < bpeTokVec.size(); w += kThreads) {
           auto &x = bpeTokVec[w];
-          bpe[this_thread][x.first] = process_bpe(x.second, codes, reversed_codes, vocab);
+          bpe[this_thread][x.first] = process_bpe(x.second, codes, reversed_codes, vocab, matchAcceptRate);
         }
       },
       i
@@ -636,11 +647,13 @@ private:
   unordered_map<string, uint32_t> vocab;
   unordered_map<tps, uint32_t, pair_hash> codes;
   unordered_map<string, tps> reversed_codes;
+  float match_accept_rate;
 
 public:
-  BPEApplyer(const string& codesPath, const string& vocabPath) {
+  BPEApplyer(const string& codesPath, const string& vocabPath, const float matchAcceptRate) {
     if (vocabPath.size() > 0) readVocab(vocabPath.c_str(), vocab);
     readCodes(codesPath.c_str(), codes, reversed_codes);
+    match_accept_rate = matchAcceptRate;
   }
 
   vector<string> apply(vector<string>& sentences) {
@@ -667,7 +680,7 @@ public:
         }
         auto bpe = word.substr(lastStart, string::npos) + kEndWord;
         word_bpes.push_back(bpe);
-        cur += process_bpe(word_bpes, codes, reversed_codes, vocab);
+        cur += process_bpe(word_bpes, codes, reversed_codes, vocab, match_accept_rate);
         if (i < words.size() - 1) cur += " ";
       }
     }
@@ -677,8 +690,9 @@ public:
 };
 
 
-void applybpe_stream(const char *codesPath, const char *vocabPath) {
-  BPEApplyer applyer(codesPath, vocabPath);
+void applybpe_stream(const char *codesPath, const char *vocabPath, const char *chrMatchAcceptRate) {
+  float matchAcceptRate = stof(string(chrMatchAcceptRate));
+  BPEApplyer applyer(codesPath, vocabPath, matchAcceptRate);
   std::string line;
   while(std::getline(std::cin, line)) {
     vector<string> tmp;
