@@ -551,7 +551,7 @@ string process_bpe(vector<string> &subwords,
       if ((i + 1 < subwords.size()) && (not justMerged) &&
           subwords[i] == bestPair->first.first &&
           subwords[i + 1] == bestPair->first.second &&
-          (static_cast <float> (rand()) / static_cast <float> (RAND_MAX) <= matchAcceptRate){
+          (static_cast <float> (rand()) / static_cast <float> (RAND_MAX) <= matchAcceptRate)){
         newSubwords.push_back(subwords[i] + subwords[i + 1]);
         justMerged = true;
       } else {
